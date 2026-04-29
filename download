@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: shithousefootball
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: FOOTBALL_API_KEY
+        value: 175fb95e18a6b2f2aabfe643dfaee5ea
