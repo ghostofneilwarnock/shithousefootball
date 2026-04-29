@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHITHOUSE FOOTBALL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #080808;
+    --pitch: #0f1a0f;
+    --green: #1a7a1a;
+    --lime: #b5ff2d;
+    --lime-dim: #b5ff2d22;
+    --white: #f0f0f0;
+    --grey: #888;
+    --dimgrey: #333;
+    --red: #ff2d2d;
+    --red-dim: #ff2d2d20;
+    --yellow: #ffd600;
+    --blue: #2d8fff;
+    --border: #1e1e1e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Oswald', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--lime);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 4px solid var(--black);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 0;
+  }
+
+  .site-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 6vw, 52px);
+    color: var(--black);
+    letter-spacing: 0.02em;
+    padding: 10px 20px;
+    line-height: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .site-title span {
+    display: block;
+    font-size: 0.38em;
+    letter-spacing: 0.18em;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    margin-top: 2px;
+  }
+
+  .header-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 10px 16px;
+    gap: 4px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--red);
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+
+  .live-dot {
+    width: 6px; height: 6px;
+    background: #fff;
+    border-radius: 50%;
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .last-updated {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #2a2a2a;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── CONTROLS BAR ── */
+  .controls {
+    background: var(--pitch);
+    border-bottom: 2px solid var(--lime);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    flex-wrap: wrap;
+    gap: 0;
+    min-height: 46px;
+  }
+
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    height: 46px;
+  }
+
+  .date-arrow {
+    background: transparent;
+    border: none;
+    color: var(--lime);
+    font-size: 22px;
+    width: 36px;
+    height: 46px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s;
+  }
+
+  .date-arrow:hover { background: var(--lime-dim); }
+
+  .date-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.08em;
+    color: var(--white);
+    min-width: 120px;
+    text-align: center;
+  }
+
+  .filter-tabs {
+    display: flex;
+    height: 46px;
+    align-items: center;
+    gap: 0;
+  }
+
+  .filter-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--grey);
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0 14px;
+    height: 46px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-tab:hover { color: var(--white); }
+
+  .filter-tab.active {
+    color: var(--lime);
+    border-bottom-color: var(--lime);
+  }
+
+  .refresh-btn {
+    background: transparent;
+    border: 1px solid var(--dimgrey);
+    color: var(--grey);
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    padding: 6px 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .refresh-btn:hover { border-color: var(--lime); color: var(--lime); }
+
+  /* ── MAIN ── */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 16px 12px 60px;
+  }
+
+  /* ── LEAGUE BLOCK ── */
+  .league-block {
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    animation: slideUp 0.25s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .league-block:nth-child(1)  { animation-delay: 0.03s; }
+  .league-block:nth-child(2)  { animation-delay: 0.06s; }
+  .league-block:nth-child(3)  { animation-delay: 0.09s; }
+  .league-block:nth-child(4)  { animation-delay: 0.12s; }
+  .league-block:nth-child(5)  { animation-delay: 0.15s; }
+  .league-block:nth-child(6)  { animation-delay: 0.18s; }
+  .league-block:nth-child(7)  { animation-delay: 0.21s; }
+  .league-block:nth-child(8)  { animation-delay: 0.24s; }
+  .league-block:nth-child(9)  { animation-delay: 0.27s; }
+  .league-block:nth-child(10) { animation-delay: 0.30s; }
+
+  .league-header {
+    background: #111;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .league-flag { font-size: 15px; flex-shrink: 0; }
+
+  .league-name {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--grey);
+  }
+
+  .league-country {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--dimgrey);
+    letter-spacing: 0.06em;
+  }
+
+  .league-match-count {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--dimgrey);
+  }
+
+  /* ── MATCH ROW ── */
+  .match-row {
+    display: grid;
+    grid-template-columns: 64px 1fr auto 1fr;
+    align-items: center;
+    padding: 11px 12px;
+    border-bottom: 1px solid #111;
+    gap: 10px;
+    transition: background 0.12s;
+  }
+
+  .match-row:last-child { border-bottom: none; }
+  .match-row:hover { background: #0e0e0e; }
+
+  /* STATUS */
+  .status-cell { text-align: center; }
+
+  .status-pill {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+  }
+
+  .s-live {
+    background: var(--red-dim);
+    color: var(--red);
+    animation: livePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes livePulse {
+    0%, 100% { background: var(--red-dim); }
+    50% { background: #ff2d2d30; }
+  }
+
+  .s-ht   { background: #ffd60020; color: var(--yellow); }
+  .s-ft   { background: #2d8fff18; color: var(--blue); }
+  .s-ns   { background: transparent; color: var(--dimgrey); font-size: 12px; }
+  .s-other{ background: transparent; color: var(--dimgrey); }
+
+  /* TEAM */
+  .team-home {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+  }
+
+  .team-away {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+  }
+
+  .team-logo {
+    width: 22px; height: 22px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .team-name {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--white);
+    line-height: 1.2;
+  }
+
+  .team-name.home { text-align: right; }
+  .team-name.away { text-align: left; }
+  .team-name.winner { color: var(--lime); font-weight: 700; }
+
+  /* SCORE */
+  .score-block {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    min-width: 56px;
+  }
+
+  .score-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: var(--white);
+    width: 26px;
+    text-align: center;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  .score-num.live { color: var(--lime); }
+  .score-num.winner { color: var(--lime); }
+
+  .score-dash {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: var(--dimgrey);
+    width: 12px;
+    text-align: center;
+  }
+
+  .score-vs {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--dimgrey);
+    letter-spacing: 0.08em;
+  }
+
+  /* ── STATES ── */
+  .state-box {
+    text-align: center;
+    padding: 70px 20px;
+    color: var(--grey);
+  }
+
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid #1e1e1e;
+    border-top-color: var(--lime);
+    border-radius: 50%;
+    animation: spin 0.65s linear infinite;
+    margin: 0 auto 18px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .state-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 0.1em;
+    color: var(--grey);
+    margin-bottom: 6px;
+  }
+
+  .state-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--dimgrey);
+    letter-spacing: 0.06em;
+  }
+
+  .error-box {
+    background: #120808;
+    border: 1px solid #ff2d2d40;
+    border-left: 3px solid var(--red);
+    border-radius: 3px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #ff8888;
+    line-height: 1.7;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #222;
+    border-top: 1px solid #111;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 500px) {
+    .team-name { font-size: 13px; }
+    .score-num { font-size: 20px; }
+    .match-row { grid-template-columns: 56px 1fr auto 1fr; gap: 6px; padding: 10px 8px; }
+    .filter-tab { padding: 0 10px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="site-title">
+      SHITHOUSE<br>FOOTBALL
+      <span>Live Scores · All Leagues</span>
+    </div>
+    <div class="header-meta">
+      <div class="live-badge" id="liveBadge" style="display:none">
+        <div class="live-dot"></div>
+        LIVE
+      </div>
+      <div class="last-updated" id="lastUpdated"></div>
+    </div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="date-nav">
+    <button class="date-arrow" onclick="changeDate(-1)">‹</button>
+    <div class="date-label" id="dateLabel">TODAY</div>
+    <button class="date-arrow" onclick="changeDate(1)">›</button>
+  </div>
+  <div class="filter-tabs">
+    <button class="filter-tab active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-tab" onclick="setFilter('live', this)">Live</button>
+    <button class="filter-tab" onclick="setFilter('ft', this)">FT</button>
+    <button class="filter-tab" onclick="setFilter('ns', this)">Soon</button>
+  </div>
+  <button class="refresh-btn" onclick="loadFixtures()">↻ Refresh</button>
+</div>
+
+<main id="main">
+  <div class="state-box" id="stateBox">
+    <div class="spinner"></div>
+    <div class="state-title">Loading Fixtures</div>
+    <div class="state-sub">Fetching from all leagues...</div>
+  </div>
+  <div id="errorBox" class="error-box" style="display:none"></div>
+  <div id="container"></div>
+</main>
+
+<footer>
+  Shithousefootball.com · Data by API-Football · Refresh every 60s
+</footer>
+
+<script>
+const LIVE = ["1H","2H","ET","BT","P","INT","LIVE"];
+const FLAGS = {
+  England:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",Spain:"🇪🇸",Germany:"🇩🇪",Italy:"🇮🇹",France:"🇫🇷",
+  Netherlands:"🇳🇱",Portugal:"🇵🇹",Brazil:"🇧🇷",Argentina:"🇦🇷",USA:"🇺🇸",
+  Mexico:"🇲🇽",Belgium:"🇧🇪",Turkey:"🇹🇷",Scotland:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",World:"🌍",
+  Europe:"🇪🇺","Saudi-Arabia":"🇸🇦",Japan:"🇯🇵","South Korea":"🇰🇷",
+  Australia:"🇦🇺",Colombia:"🇨🇴",Chile:"🇨🇱",Uruguay:"🇺🇾",Greece:"🇬🇷",
+  China:"🇨🇳",Nigeria:"🇳🇬",Morocco:"🇲🇦",Netherlands:"🇳🇱",
+};
+
+let currentDate = new Date();
+let currentFilter = 'all';
+let refreshTimer = null;
+let allFixtures = [];
+
+function fmtParam(d) { return d.toISOString().split("T")[0]; }
+function fmtLabel(d) {
+  const t = new Date(); t.setHours(0,0,0,0);
+  const x = new Date(d); x.setHours(0,0,0,0);
+  const diff = Math.round((x - t) / 86400000);
+  if (diff === 0) return "TODAY";
+  if (diff === -1) return "YESTERDAY";
+  if (diff === 1) return "TOMORROW";
+  return d.toLocaleDateString("en-US", { month:"short", day:"numeric" }).toUpperCase();
+}
+
+function changeDate(delta) {
+  currentDate.setDate(currentDate.getDate() + delta);
+  document.getElementById("dateLabel").textContent = fmtLabel(currentDate);
+  loadFixtures();
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  render();
+}
+
+async function loadFixtures() {
+  showState(true);
+  hideError();
+
+  try {
+    const res = await fetch(`/api/fixtures?date=${fmtParam(currentDate)}`);
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    allFixtures = data.fixtures || [];
+    render();
+    document.getElementById("lastUpdated").textContent =
+      "Updated " + new Date().toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit", second:"2-digit" });
+    scheduleRefresh();
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    showState(false);
+  }
+}
+
+function render() {
+  const container = document.getElementById("container");
+  container.innerHTML = "";
+
+  let filtered = allFixtures;
+  if (currentFilter === "live")
+    filtered = allFixtures.filter(f => LIVE.includes(f.fixture.status.short));
+  else if (currentFilter === "ft")
+    filtered = allFixtures.filter(f => ["FT","AET","PEN"].includes(f.fixture.status.short));
+  else if (currentFilter === "ns")
+    filtered = allFixtures.filter(f => f.fixture.status.short === "NS");
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="state-box"><div class="state-title">No Matches</div><div class="state-sub">Nothing to show for this filter</div></div>`;
+    document.getElementById("liveBadge").style.display = "none";
+    return;
+  }
+
+  // Group by league
+  const leagues = {};
+  filtered.forEach(f => {
+    const id = f.league.id;
+    if (!leagues[id]) leagues[id] = { meta: f.league, matches: [] };
+    leagues[id].matches.push(f);
+  });
+
+  // Sort: live leagues first
+  const sorted = Object.values(leagues).sort((a, b) => {
+    const aL = a.matches.some(m => LIVE.includes(m.fixture.status.short));
+    const bL = b.matches.some(m => LIVE.includes(m.fixture.status.short));
+    if (aL !== bL) return aL ? -1 : 1;
+    return a.meta.name.localeCompare(b.meta.name);
+  });
+
+  let hasLive = false;
+
+  sorted.forEach(({ meta, matches }) => {
+    const block = document.createElement("div");
+    block.className = "league-block";
+
+    const isLeagueLive = matches.some(m => LIVE.includes(m.fixture.status.short));
+    if (isLeagueLive) hasLive = true;
+
+    block.innerHTML = `
+      <div class="league-header">
+        <span class="league-flag">${FLAGS[meta.country] || "🏆"}</span>
+        <span class="league-name">${meta.name}</span>
+        <span class="league-country">${meta.country}</span>
+        <span class="league-match-count">${matches.length}m</span>
+      </div>
+      ${matches.map(matchHTML).join("")}
+    `;
+    container.appendChild(block);
+  });
+
+  document.getElementById("liveBadge").style.display = hasLive ? "flex" : "none";
+}
+
+function matchHTML(f) {
+  const s = f.fixture.status;
+  const home = f.teams.home;
+  const away = f.teams.away;
+  const g = f.goals;
+  const isLive = LIVE.includes(s.short);
+  const isFT = ["FT","AET","PEN"].includes(s.short);
+  const isHT = s.short === "HT";
+  const isNS = s.short === "NS";
+  const hWin = isFT && g.home > g.away;
+  const aWin = isFT && g.away > g.home;
+
+  let pill;
+  if (isHT)       pill = `<span class="status-pill s-ht">HT</span>`;
+  else if (isLive) pill = `<span class="status-pill s-live">${s.elapsed ? s.elapsed + "'" : "•"}</span>`;
+  else if (isFT)   pill = `<span class="status-pill s-ft">FT</span>`;
+  else if (isNS) {
+    const t = new Date(f.fixture.date).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+    pill = `<span class="status-pill s-ns">${t}</span>`;
+  } else pill = `<span class="status-pill s-other">${s.short}</span>`;
+
+  const logoH = home.logo ? `<img class="team-logo" src="${home.logo}" alt="" onerror="this.style.display='none'">` : "";
+  const logoA = away.logo ? `<img class="team-logo" src="${away.logo}" alt="" onerror="this.style.display='none'">` : "";
+
+  let scoreBlock;
+  if (isNS) {
+    scoreBlock = `<div class="score-block"><span class="score-vs">VS</span></div>`;
+  } else {
+    const hCls = `score-num${isLive ? " live" : hWin ? " winner" : ""}`;
+    const aCls = `score-num${isLive ? " live" : aWin ? " winner" : ""}`;
+    scoreBlock = `<div class="score-block">
+      <span class="${hCls}">${g.home ?? "-"}</span>
+      <span class="score-dash">:</span>
+      <span class="${aCls}">${g.away ?? "-"}</span>
+    </div>`;
+  }
+
+  return `
+    <div class="match-row">
+      <div class="status-cell">${pill}</div>
+      <div class="team-home">
+        <span class="team-name home${hWin ? " winner" : ""}">${home.name}</span>
+        ${logoH}
+      </div>
+      ${scoreBlock}
+      <div class="team-away">
+        ${logoA}
+        <span class="team-name away${aWin ? " winner" : ""}">${away.name}</span>
+      </div>
+    </div>`;
+}
+
+function showState(loading) {
+  document.getElementById("stateBox").style.display = loading ? "block" : "none";
+}
+
+function showError(msg) {
+  const el = document.getElementById("errorBox");
+  el.textContent = "⚠ " + msg;
+  el.style.display = "block";
+}
+
+function hideError() {
+  document.getElementById("errorBox").style.display = "none";
+}
+
+function scheduleRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  const isToday = fmtParam(currentDate) === fmtParam(new Date());
+  if (isToday) refreshTimer = setInterval(loadFixtures, 60000);
+}
+
+// Init
+document.getElementById("dateLabel").textContent = fmtLabel(currentDate);
+loadFixtures();
+</script>
+</body>
+</html>
