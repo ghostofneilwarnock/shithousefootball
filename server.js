@@ -50,15 +50,12 @@ app.get("/api/fixture-stats", async (req, res) => {
   await proxyEndpoint(`${BASE}/fixtures/statistics?fixture=${id}`, res);
 });
  
-// League standings — tries current season first, falls back to previous year
+// League standings — tries current season first, falls back to previous years
 app.get("/api/standings", async (req, res) => {
   const league = req.query.league;
   if (!league) return res.status(400).json({ error: "Missing league" });
  
-  const now = new Date();
-  const currentYear = now.getFullYear();
- 
-  // Try up to 3 seasons back until we get data
+  const currentYear = new Date().getFullYear();
   const seasonsToTry = [currentYear, currentYear - 1, currentYear - 2];
  
   for (const season of seasonsToTry) {
@@ -70,7 +67,6 @@ app.get("/api/standings", async (req, res) => {
         return res.status(401).json({ error: "API key error" });
       }
       const results = data.response || [];
-      // Check there's actual standings data
       if (results.length > 0 && results[0].league && results[0].league.standings && results[0].league.standings.length > 0) {
         return res.json(data);
       }
@@ -79,8 +75,23 @@ app.get("/api/standings", async (req, res) => {
     }
   }
  
-  // Nothing found across all seasons
   res.json({ response: [] });
+});
+ 
+// DEBUG endpoint — call this in browser to see raw API response
+// e.g. https://shithousefootball.onrender.com/api/debug-standings?league=39
+app.get("/api/debug-standings", async (req, res) => {
+  const league = req.query.league || "39";
+  const season = req.query.season || new Date().getFullYear();
+  const url = `${BASE}/standings?league=${league}&season=${season}`;
+  try {
+    const response = await fetch(url, { headers: HEADERS });
+    const text = await response.text();
+    res.setHeader("Content-Type", "application/json");
+    res.send(text);
+  } catch (err) {
+    res.json({ error: err.message });
+  }
 });
  
 // Catch-all
