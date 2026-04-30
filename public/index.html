@@ -270,12 +270,12 @@ footer{text-align:center;padding:20px;font-family:'DM Mono',monospace;font-size:
 <nav class="sidebar">
   <div class="sidebar-section">
     <div class="sidebar-label">Leagues</div>
-    <button class="sidebar-btn" onclick="showLeaguePage(39,'Premier League','\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F','England')" id="sb-league-39">
-      <span class="sidebar-btn-logo flag">\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F</span>
+    <button class="sidebar-btn" onclick="showLeaguePage(39,'Premier League','','England')" id="sb-league-39">
+      <img class="sidebar-btn-logo" src="https://media.api-sports.io/football/leagues/39.png" onerror="this.style.display='none'" alt="">
       <div><div class="sidebar-btn-text">Premier League</div><span class="sidebar-btn-sub">England</span></div>
     </button>
-    <button class="sidebar-btn" onclick="showLeaguePage(40,'Championship','\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F','England')" id="sb-league-40">
-      <span class="sidebar-btn-logo flag">\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F</span>
+    <button class="sidebar-btn" onclick="showLeaguePage(40,'Championship','','England')" id="sb-league-40">
+      <img class="sidebar-btn-logo" src="https://media.api-sports.io/football/leagues/40.png" onerror="this.style.display='none'" alt="">
       <div><div class="sidebar-btn-text">Championship</div><span class="sidebar-btn-sub">England</span></div>
     </button>
   </div>
@@ -288,16 +288,16 @@ footer{text-align:center;padding:20px;font-family:'DM Mono',monospace;font-size:
       <img class="sidebar-btn-logo" src="https://media.api-sports.io/football/teams/63.png" onerror="this.style.display='none'" alt="">
       <div><div class="sidebar-btn-text">Leeds United</div><span class="sidebar-btn-sub">Premier League</span></div>
     </button>
-    <button class="sidebar-btn" onclick="showTeamPage(1359,'Sunderland','https://media.api-sports.io/football/teams/1359.png',39)" id="sb-team-1359">
-      <img class="sidebar-btn-logo" src="https://media.api-sports.io/football/teams/1359.png" onerror="this.style.display='none'" alt="">
+    <button class="sidebar-btn" onclick="showTeamPage(45,'Sunderland','https://media.api-sports.io/football/teams/45.png',39)" id="sb-team-45">
+      <img class="sidebar-btn-logo" src="https://media.api-sports.io/football/teams/45.png" onerror="this.style.display='none'" alt="">
       <div><div class="sidebar-btn-text">Sunderland</div><span class="sidebar-btn-sub">Premier League</span></div>
     </button>
     <button class="sidebar-btn" onclick="showTeamPage(48,'West Ham United','https://media.api-sports.io/football/teams/48.png',39)" id="sb-team-48">
       <img class="sidebar-btn-logo" src="https://media.api-sports.io/football/teams/48.png" onerror="this.style.display='none'" alt="">
       <div><div class="sidebar-btn-text">West Ham</div><span class="sidebar-btn-sub">Premier League</span></div>
     </button>
-    <button class="sidebar-btn" onclick="showTeamPage(9,'PSG','https://media.api-sports.io/football/teams/9.png',61)" id="sb-team-9">
-      <img class="sidebar-btn-logo" src="https://media.api-sports.io/football/teams/9.png" onerror="this.style.display='none'" alt="">
+    <button class="sidebar-btn" onclick="showTeamPage(85,'PSG','https://media.api-sports.io/football/teams/85.png',61)" id="sb-team-85">
+      <img class="sidebar-btn-logo" src="https://media.api-sports.io/football/teams/85.png" onerror="this.style.display='none'" alt="">
       <div><div class="sidebar-btn-text">PSG</div><span class="sidebar-btn-sub">Ligue 1</span></div>
     </button>
     <button class="sidebar-btn" onclick="showTeamPage(10,'England NT','https://media.api-sports.io/football/teams/10.png',45)" id="sb-team-10">
@@ -895,7 +895,7 @@ async function showLeaguePage(leagueId,leagueName,flag,country){
     var assistsData=assistsRes.ok?await assistsRes.json():{response:[]};
  
     var html='<div class="page-hero">'
-      +'<div class="page-hero-flag">'+flag+'</div>'
+      +'<img class="page-hero-logo" src="https://media.api-sports.io/football/leagues/'+leagueId+'.png" onerror="this.style.display=\'none\'" alt="">'
       +'<div><div class="page-hero-name">'+leagueName+'</div><div class="page-hero-sub">'+country+'</div></div>'
       +'</div>';
  
