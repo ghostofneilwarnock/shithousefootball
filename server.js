@@ -9,9 +9,11 @@ const FOOTBALL_API_KEY = process.env.FOOTBALL_API_KEY || "175fb95e18a6b2f2aabfe6
 const BASE = "https://v3.football.api-sports.io";
 const HEADERS = { "x-apisports-key": FOOTBALL_API_KEY };
  
+// Free plan supports seasons 2022-2024 only
+const MAX_SEASON = 2024;
+ 
 app.use(express.static(path.join(__dirname, "public")));
  
-// Helper: proxy any API-Football endpoint
 async function proxyEndpoint(url, res) {
   try {
     const response = await fetch(url, { headers: HEADERS });
@@ -50,48 +52,29 @@ app.get("/api/fixture-stats", async (req, res) => {
   await proxyEndpoint(`${BASE}/fixtures/statistics?fixture=${id}`, res);
 });
  
-// League standings — tries current season first, falls back to previous years
+// League standings — tries seasons from MAX_SEASON downward
 app.get("/api/standings", async (req, res) => {
   const league = req.query.league;
   if (!league) return res.status(400).json({ error: "Missing league" });
  
-  const currentYear = new Date().getFullYear();
-  const seasonsToTry = [currentYear, currentYear - 1, currentYear - 2];
+  const seasonsToTry = [MAX_SEASON, MAX_SEASON - 1, MAX_SEASON - 2];
  
   for (const season of seasonsToTry) {
     try {
       const response = await fetch(`${BASE}/standings?league=${league}&season=${season}`, { headers: HEADERS });
       if (!response.ok) continue;
       const data = await response.json();
-      if (data.errors && Object.keys(data.errors).length > 0) {
-        return res.status(401).json({ error: "API key error" });
-      }
+      if (data.errors && Object.keys(data.errors).length > 0) continue;
       const results = data.response || [];
       if (results.length > 0 && results[0].league && results[0].league.standings && results[0].league.standings.length > 0) {
         return res.json(data);
       }
     } catch (err) {
-      console.error(`Standings fetch error for season ${season}:`, err);
+      console.error(`Standings error for season ${season}:`, err);
     }
   }
  
   res.json({ response: [] });
-});
- 
-// DEBUG endpoint — call this in browser to see raw API response
-// e.g. https://shithousefootball.onrender.com/api/debug-standings?league=39
-app.get("/api/debug-standings", async (req, res) => {
-  const league = req.query.league || "39";
-  const season = req.query.season || new Date().getFullYear();
-  const url = `${BASE}/standings?league=${league}&season=${season}`;
-  try {
-    const response = await fetch(url, { headers: HEADERS });
-    const text = await response.text();
-    res.setHeader("Content-Type", "application/json");
-    res.send(text);
-  } catch (err) {
-    res.json({ error: err.message });
-  }
 });
  
 // Catch-all
