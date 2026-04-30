@@ -50,12 +50,37 @@ app.get("/api/fixture-stats", async (req, res) => {
   await proxyEndpoint(`${BASE}/fixtures/statistics?fixture=${id}`, res);
 });
  
-// League standings
+// League standings — tries current season first, falls back to previous year
 app.get("/api/standings", async (req, res) => {
   const league = req.query.league;
-  const season = req.query.season;
-  if (!league || !season) return res.status(400).json({ error: "Missing league or season" });
-  await proxyEndpoint(`${BASE}/standings?league=${league}&season=${season}`, res);
+  if (!league) return res.status(400).json({ error: "Missing league" });
+ 
+  const now = new Date();
+  const currentYear = now.getFullYear();
+ 
+  // Try up to 3 seasons back until we get data
+  const seasonsToTry = [currentYear, currentYear - 1, currentYear - 2];
+ 
+  for (const season of seasonsToTry) {
+    try {
+      const response = await fetch(`${BASE}/standings?league=${league}&season=${season}`, { headers: HEADERS });
+      if (!response.ok) continue;
+      const data = await response.json();
+      if (data.errors && Object.keys(data.errors).length > 0) {
+        return res.status(401).json({ error: "API key error" });
+      }
+      const results = data.response || [];
+      // Check there's actual standings data
+      if (results.length > 0 && results[0].league && results[0].league.standings && results[0].league.standings.length > 0) {
+        return res.json(data);
+      }
+    } catch (err) {
+      console.error(`Standings fetch error for season ${season}:`, err);
+    }
+  }
+ 
+  // Nothing found across all seasons
+  res.json({ response: [] });
 });
  
 // Catch-all
