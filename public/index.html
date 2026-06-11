@@ -454,7 +454,9 @@ function clearSearch(){document.getElementById("searchInput").value="";searchQue
 async function loadFixtures(){
   showState(true);hideError();showPage('scores');
   try{
-    var res=await fetch("/api/fixtures?date="+fmtParam(currentDate)+"&utcOffset="+(-new Date().getTimezoneOffset()));
+    var offset = new Date().getTimezoneOffset() * -1;
+console.log("Fetching with offset:", offset);
+var res=await fetch("/api/fixtures?date="+fmtParam(currentDate)+"&utcOffset="+offset);
     if(!res.ok)throw new Error("Server error "+res.status);
     var data=await res.json();
     if(data.error)throw new Error(data.error);
