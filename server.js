@@ -39,12 +39,34 @@ function currentSeason() {
 // ── FIXTURES ──────────────────────────────────────────────────────────────
 app.get("/api/fixtures", async (req, res) => {
   const date = req.query.date;
+  const utcOffset = parseInt(req.query.utcOffset) || -300;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: "Invalid date" });
-  const r = await fetch(`${BASE}/fixtures?date=${date}`, { headers: HEADERS });
-  if (!r.ok) return res.status(r.status).json({ error: `API error ${r.status}` });
-  const data = await r.json();
-  if (data.errors && Object.keys(data.errors).length > 0) return res.status(401).json({ error: "API key error" });
-  res.json({ fixtures: data.response || [] });
+
+  const [y, m, d] = date.split('-').map(Number);
+  const nextDate = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().split('T')[0];
+
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch(`${BASE}/fixtures?date=${date}`, { headers: HEADERS }),
+      fetch(`${BASE}/fixtures?date=${nextDate}`, { headers: HEADERS })
+    ]);
+    const [data1, data2] = await Promise.all([r1.json(), r2.json()]);
+    const combined = [...(data1.response || []), ...(data2.response || [])];
+
+    const seen = new Set();
+    const filtered = combined.filter(f => {
+      if (seen.has(f.fixture.id)) return false;
+      seen.add(f.fixture.id);
+      const local = new Date(new Date(f.fixture.date).getTime() + utcOffset * 60 * 1000);
+      const localDate = `${local.getUTCFullYear()}-${String(local.getUTCMonth()+1).padStart(2,'0')}-${String(local.getUTCDate()).padStart(2,'0')}`;
+      return localDate === date;
+    });
+
+    res.json({ fixtures: filtered });
+  } catch (e) {
+    console.error("Fixtures error:", e);
+    res.status(500).json({ error: e.message });
+  }
 });
  
 // ── FIXTURE EVENTS ────────────────────────────────────────────────────────
