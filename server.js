@@ -10,13 +10,27 @@ const BASE = "https://v3.football.api-sports.io";
 const HEADERS = { "x-apisports-key": FOOTBALL_API_KEY };
  
 app.use(express.static(path.join(__dirname, "public")));
+
+// Fetch with retry - wraps both fetch AND .json() so stream errors are caught
+async function fetchJSON(url, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const r = await fetch(url, { headers: HEADERS });
+      const data = await r.json();
+      return { ok: r.ok, status: r.status, data };
+    } catch (e) {
+      console.error(`fetchJSON attempt ${i + 1} failed for ${url}: ${e.message}`);
+      if (i === retries) throw e;
+      await new Promise(res => setTimeout(res, 600));
+    }
+  }
+}
  
 // Generic proxy helper
 async function proxy(url, res) {
   try {
-    const r = await fetchWithRetry(url, { headers: HEADERS });
-    if (!r.ok) return res.status(r.status).json({ error: `API error ${r.status}` });
-    const data = await r.json();
+    const { ok, status, data } = await fetchJSON(url);
+    if (!ok) return res.status(status).json({ error: `API error ${status}` });
     if (data.errors && Object.keys(data.errors).length > 0) {
       return res.status(401).json({ error: "API error", details: data.errors });
     }
@@ -26,24 +40,8 @@ async function proxy(url, res) {
     res.status(500).json({ error: e.message });
   }
 }
-
-// Retry helper - retries up to 2 times on failure with 500ms delay
-async function fetchWithRetry(url, options, retries = 2) {
-  for (let i = 0; i <= retries; i++) {
-    try {
-      const r = await fetch(url, options);
-      if (r.ok) return r;
-      // Don't retry on auth errors
-      if (r.status === 401 || r.status === 403) return r;
-    } catch (e) {
-      console.error(`Fetch attempt ${i + 1} failed for ${url}:`, e.message);
-      if (i === retries) throw e;
-      await new Promise(res => setTimeout(res, 500));
-    }
-  }
-}
  
-// Current season helper - Pro plan has access to current season
+// Current season helper
 function currentSeason() {
   const now = new Date();
   const year = now.getFullYear();
@@ -61,12 +59,11 @@ app.get("/api/fixtures", async (req, res) => {
   const nextDate = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().split('T')[0];
 
   try {
-    const [r1, r2] = await Promise.all([
-      fetchWithRetry(`${BASE}/fixtures?date=${date}`, { headers: HEADERS }),
-      fetchWithRetry(`${BASE}/fixtures?date=${nextDate}`, { headers: HEADERS })
+    const [result1, result2] = await Promise.all([
+      fetchJSON(`${BASE}/fixtures?date=${date}`),
+      fetchJSON(`${BASE}/fixtures?date=${nextDate}`)
     ]);
-    const [data1, data2] = await Promise.all([r1.json(), r2.json()]);
-    const combined = [...(data1.response || []), ...(data2.response || [])];
+    const combined = [...(result1.data.response || []), ...(result2.data.response || [])];
 
     const seen = new Set();
     const filtered = combined.filter(f => {
@@ -112,9 +109,8 @@ app.get("/api/standings", async (req, res) => {
   const seasons = [currentSeason(), currentSeason() - 1, currentSeason() - 2];
   for (const season of seasons) {
     try {
-      const r = await fetchWithRetry(`${BASE}/standings?league=${league}&season=${season}`, { headers: HEADERS });
-      if (!r.ok) continue;
-      const data = await r.json();
+      const { ok, data } = await fetchJSON(`${BASE}/standings?league=${league}&season=${season}`);
+      if (!ok) continue;
       if (data.errors && Object.keys(data.errors).length > 0) continue;
       const results = data.response || [];
       if (results.length > 0 && results[0].league?.standings?.length > 0) return res.json(data);
@@ -157,9 +153,8 @@ app.get("/api/team-standing", async (req, res) => {
   const seasons = [currentSeason(), currentSeason() - 1];
   for (const season of seasons) {
     try {
-      const r = await fetchWithRetry(`${BASE}/standings?league=${league}&season=${season}&team=${team}`, { headers: HEADERS });
-      if (!r.ok) continue;
-      const data = await r.json();
+      const { ok, data } = await fetchJSON(`${BASE}/standings?league=${league}&season=${season}&team=${team}`);
+      if (!ok) continue;
       if (data.errors && Object.keys(data.errors).length > 0) continue;
       if ((data.response || []).length > 0) return res.json(data);
     } catch (e) { console.error(e); }
@@ -198,9 +193,8 @@ app.get("/api/top-assists", async (req, res) => {
 // ── WORLD CUP GROUP STANDINGS ─────────────────────────────────────────────
 app.get("/api/wc-standings", async (req, res) => {
   try {
-    const r = await fetchWithRetry(`${BASE}/standings?league=1&season=2026`, { headers: HEADERS });
-    if (!r.ok) return res.status(r.status).json({ error: `API error ${r.status}` });
-    const data = await r.json();
+    const { ok, status, data } = await fetchJSON(`${BASE}/standings?league=1&season=2026`);
+    if (!ok) return res.status(status).json({ error: `API error ${status}` });
     if (data.errors && Object.keys(data.errors).length > 0)
       return res.status(401).json({ error: "API error", details: data.errors });
     res.json(data);
