@@ -319,7 +319,6 @@ footer{text-align:center;padding:20px;font-family:'DM Mono',monospace;font-size:
 <!-- ── MAIN AREA ── -->
 <div class="main-area">
 
-  <!-- SCORES PAGE controls -->
   <div id="scores-controls">
     <div class="controls">
       <div class="date-nav">
@@ -346,24 +345,13 @@ footer{text-align:center;padding:20px;font-family:'DM Mono',monospace;font-size:
   </div>
 
   <div class="scroll-area">
-
-    <!-- SCORES PAGE -->
     <div class="page active" id="page-scores">
       <div class="state-box" id="stateBox"><div class="spinner"></div><div class="state-title">Loading Fixtures</div><div class="state-sub">Fetching from all leagues...</div></div>
       <div id="errorBox" class="error-box" style="display:none"></div>
       <div id="container"></div>
     </div>
-
-    <!-- TEAM PAGE -->
-    <div class="page" id="page-team">
-      <div id="team-content"></div>
-    </div>
-
-    <!-- LEAGUE PAGE -->
-    <div class="page" id="page-league">
-      <div id="league-content"></div>
-    </div>
-
+    <div class="page" id="page-team"><div id="team-content"></div></div>
+    <div class="page" id="page-league"><div id="league-content"></div></div>
   </div>
   <footer>Shithousefootball.com &middot; Tap match for stats &middot; Tap league header for standings</footer>
 </div>
@@ -373,6 +361,10 @@ footer{text-align:center;padding:20px;font-family:'DM Mono',monospace;font-size:
 // ═══════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════
+var API_KEY="175fb95e18a6b2f2aabfe643dfaee5ea";
+var API_BASE="https://v3.football.api-sports.io";
+var API_HEADERS={"x-apisports-key":API_KEY};
+
 var LIVE=["1H","2H","ET","BT","P","INT","LIVE"];
 var FLAGS={
   England:"\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F",
@@ -425,15 +417,24 @@ function getPriority(name,country){
 var currentDate=new Date(),currentFilter='all',refreshTimer=null,allFixtures=[],searchQuery='';
 var matchCache={},standingsCache={};
 var currentPage='scores';
-
-// ── WC STANDINGS CACHE ──
 var wcStandingsCache=null;
 
+// ═══════════════════════════════════════════════════════════
+// DIRECT API FETCH (browser -> API-Football directly)
+// ═══════════════════════════════════════════════════════════
+async function apiFetch(path){
+  var res=await fetch(API_BASE+path,{headers:API_HEADERS});
+  var data=await res.json();
+  return data;
+}
+
+// ═══════════════════════════════════════════════════════════
+// WC STANDINGS
+// ═══════════════════════════════════════════════════════════
 async function fetchWCStandings(){
   if(wcStandingsCache)return wcStandingsCache;
   try{
-    var r=await fetch('/api/wc-standings');
-    var data=await r.json();
+    var data=await apiFetch('/standings?league=1&season=2026');
     var groups={};
     ((data.response||[])[0]?.league?.standings||[]).forEach(function(group){
       if(group[0])groups[group[0].group]=group;
@@ -500,18 +501,38 @@ function onSearch(){searchQuery=document.getElementById("searchInput").value.tri
 function clearSearch(){document.getElementById("searchInput").value="";searchQuery="";document.getElementById("searchClear").classList.remove("show");document.getElementById("searchCount").textContent="";renderScores();}
 
 // ═══════════════════════════════════════════════════════════
-// SCORES LOAD + RENDER
+// SCORES LOAD - now fetches directly from API-Football
 // ═══════════════════════════════════════════════════════════
 async function loadFixtures(){
   showState(true);hideError();showPage('scores');
   try{
+    var dateStr=fmtParam(currentDate);
     var offset=new Date().getTimezoneOffset()*-1;
     console.log("Fetching with offset:",offset);
-    var res=await fetch("/api/fixtures?date="+fmtParam(currentDate)+"&utcOffset="+offset);
-    if(!res.ok)throw new Error("Server error "+res.status);
-    var data=await res.json();
-    if(data.error)throw new Error(data.error);
-    allFixtures=data.fixtures||[];
+
+    // Fetch today directly from API-Football
+    var data=await apiFetch('/fixtures?date='+dateStr);
+    if(data.errors&&Object.keys(data.errors).length>0)throw new Error(JSON.stringify(data.errors));
+    var combined=data.response||[];
+
+    // Try next day for timezone edge cases
+    try{
+      var nextDate=new Date(currentDate);
+      nextDate.setDate(nextDate.getDate()+1);
+      var data2=await apiFetch('/fixtures?date='+fmtParam(nextDate));
+      combined=combined.concat(data2.response||[]);
+    }catch(e){console.log("Next-day fetch failed:",e.message);}
+
+    // Filter to local date
+    var seen=new Set();
+    allFixtures=combined.filter(function(f){
+      if(seen.has(f.fixture.id))return false;
+      seen.add(f.fixture.id);
+      var local=new Date(new Date(f.fixture.date).getTime()+offset*60*1000);
+      var localDate=local.getUTCFullYear()+"-"+String(local.getUTCMonth()+1).padStart(2,'0')+"-"+String(local.getUTCDate()).padStart(2,'0');
+      return localDate===dateStr;
+    });
+
     matchCache={};standingsCache={};
     renderScores();
     document.getElementById("lastUpdated").textContent="Updated "+new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",second:"2-digit"});
@@ -520,6 +541,9 @@ async function loadFixtures(){
   finally{showState(false);}
 }
 
+// ═══════════════════════════════════════════════════════════
+// RENDER SCORES
+// ═══════════════════════════════════════════════════════════
 function renderScores(){
   var container=document.getElementById("container");
   container.innerHTML="";
@@ -604,7 +628,7 @@ function renderScores(){
 }
 
 // ═══════════════════════════════════════════════════════════
-// MATCH DETAIL (events + stats + lineups + WC standings)
+// MATCH DETAIL
 // ═══════════════════════════════════════════════════════════
 async function toggleMatch(fixtureId,homeTeamId,el){
   var detailEl=document.getElementById("detail-"+fixtureId);
@@ -617,7 +641,6 @@ async function toggleMatch(fixtureId,homeTeamId,el){
   if(detailEl.dataset.loaded==="1")return;
   detailEl.dataset.loaded="1";
 
-  // capture league/team IDs stored on the element from renderScores
   var leagueId=parseInt(detailEl.dataset.leagueId);
   var homeId=parseInt(detailEl.dataset.homeId);
   var awayId=parseInt(detailEl.dataset.awayId);
@@ -626,16 +649,13 @@ async function toggleMatch(fixtureId,homeTeamId,el){
   detailEl.innerHTML='<div class="detail-loading"><span class="mini-spinner"></span>Loading...</div>';
   try{
     var [evRes,stRes,luRes]=await Promise.all([
-      fetch("/api/fixture-events?id="+fixtureId),
-      fetch("/api/fixture-stats?id="+fixtureId),
-      fetch("/api/fixture-lineups?id="+fixtureId)
+      apiFetch('/fixtures/events?fixture='+fixtureId),
+      apiFetch('/fixtures/statistics?fixture='+fixtureId),
+      apiFetch('/fixtures/lineups?fixture='+fixtureId)
     ]);
-    var evData=evRes.ok?await evRes.json():{response:[]};
-    var stData=stRes.ok?await stRes.json():{response:[]};
-    var luData=luRes.ok?await luRes.json():{response:[]};
-    var evHtml=renderEvents(evData.response||[],homeTeamId);
-    var stHtml=renderStats(stData.response||[]);
-    var luHtml=renderLineup(luData.response||[]);
+    var evHtml=renderEvents(evRes.response||[],homeTeamId);
+    var stHtml=renderStats(stRes.response||[]);
+    var luHtml=renderLineup(luRes.response||[]);
     detailEl.innerHTML=
       '<div class="detail-tabs">'
       +'<button class="detail-tab active" onclick="switchTab(this,\'ev-'+fixtureId+'\')">Events</button>'
@@ -646,7 +666,6 @@ async function toggleMatch(fixtureId,homeTeamId,el){
       +'<div class="detail-pane" id="st-'+fixtureId+'">'+stHtml+'</div>'
       +'<div class="detail-pane" id="lu-'+fixtureId+'">'+luHtml+'</div>';
 
-    // inject WC group standings below the tabs
     if(isWC){
       var groups=await fetchWCStandings();
       if(groups){
@@ -721,7 +740,7 @@ function renderStats(stats){
 }
 
 // ═══════════════════════════════════════════════════════════
-// LINEUP / GRAPHICAL PITCH RENDER
+// LINEUP RENDER
 // ═══════════════════════════════════════════════════════════
 function renderLineup(lineups){
   if(!lineups||lineups.length===0)return'<div class="no-data">Lineup not available</div>';
@@ -807,7 +826,7 @@ function renderLineup(lineups){
 }
 
 // ═══════════════════════════════════════════════════════════
-// STANDINGS (inline in scores page)
+// STANDINGS (league header click)
 // ═══════════════════════════════════════════════════════════
 async function toggleStandings(leagueId,headerEl){
   var panelEl=document.getElementById("standings-"+leagueId);
@@ -819,10 +838,14 @@ async function toggleStandings(leagueId,headerEl){
   panelEl.dataset.loaded="1";
   panelEl.innerHTML='<div class="standings-loading"><span class="mini-spinner"></span>Loading standings...</div>';
   try{
-    var res=await fetch("/api/standings?league="+leagueId);
-    var data=await res.json();
+    var data=await apiFetch('/standings?league='+leagueId+'&season='+currentSeason());
     panelEl.innerHTML=renderStandingsTable(data.response||[]);
   }catch(e){panelEl.innerHTML='<div class="no-data">Could not load standings</div>';}
+}
+
+function currentSeason(){
+  var now=new Date(),year=now.getFullYear(),month=now.getMonth()+1;
+  return month>=8?year:year-1;
 }
 
 function renderStandingsTable(data){
@@ -863,16 +886,13 @@ async function showTeamPage(teamId,teamName,teamLogo,leagueId){
   var content=document.getElementById('team-content');
   content.innerHTML='<div class="state-box"><div class="spinner"></div><div class="state-title">Loading '+teamName+'</div></div>';
   try{
-    var [nextRes,lastRes,standRes,statsRes]=await Promise.all([
-      fetch("/api/team-fixtures?team="+teamId+"&next=5"),
-      fetch("/api/team-fixtures?team="+teamId+"&last=5"),
-      fetch("/api/standings?league="+leagueId),
-      fetch("/api/team-stats?team="+teamId+"&league="+leagueId)
+    var season=currentSeason();
+    var [nextData,lastData,standData,statsData]=await Promise.all([
+      apiFetch('/fixtures?team='+teamId+'&next=5&season='+season),
+      apiFetch('/fixtures?team='+teamId+'&last=5&season='+season),
+      apiFetch('/standings?league='+leagueId+'&season='+season),
+      apiFetch('/teams/statistics?team='+teamId+'&league='+leagueId+'&season='+season)
     ]);
-    var nextData=nextRes.ok?await nextRes.json():{response:[]};
-    var lastData=lastRes.ok?await lastRes.json():{response:[]};
-    var standData=standRes.ok?await standRes.json():{response:[]};
-    var statsData=statsRes.ok?await statsRes.json():{response:null};
 
     var html='<div class="page-hero">'
       +'<img class="page-hero-logo" src="'+teamLogo+'" onerror="this.style.display=\'none\'" alt="">'
@@ -935,18 +955,14 @@ async function showLeaguePage(leagueId,leagueName,flag,country){
   var content=document.getElementById('league-content');
   content.innerHTML='<div class="state-box"><div class="spinner"></div><div class="state-title">Loading '+leagueName+'</div></div>';
   try{
-    var [nextRes,lastRes,standRes,scorersRes,assistsRes]=await Promise.all([
-      fetch("/api/league-fixtures?league="+leagueId+"&next=10"),
-      fetch("/api/league-fixtures?league="+leagueId+"&last=10"),
-      fetch("/api/standings?league="+leagueId),
-      fetch("/api/top-scorers?league="+leagueId),
-      fetch("/api/top-assists?league="+leagueId)
+    var season=currentSeason();
+    var [nextData,lastData,standData,scorersData,assistsData]=await Promise.all([
+      apiFetch('/fixtures?league='+leagueId+'&next=10&season='+season),
+      apiFetch('/fixtures?league='+leagueId+'&last=10&season='+season),
+      apiFetch('/standings?league='+leagueId+'&season='+season),
+      apiFetch('/players/topscorers?league='+leagueId+'&season='+season),
+      apiFetch('/players/topassists?league='+leagueId+'&season='+season)
     ]);
-    var nextData=nextRes.ok?await nextRes.json():{response:[]};
-    var lastData=lastRes.ok?await lastRes.json():{response:[]};
-    var standData=standRes.ok?await standRes.json():{response:[]};
-    var scorersData=scorersRes.ok?await scorersRes.json():{response:[]};
-    var assistsData=assistsRes.ok?await assistsRes.json():{response:[]};
 
     var html='<div class="page-hero">'
       +'<img class="page-hero-logo" src="https://media.api-sports.io/football/leagues/'+leagueId+'.png" onerror="this.style.display=\'none\'" alt="">'
@@ -1023,7 +1039,7 @@ function switchPageTab(btn,paneId){
 }
 
 // ═══════════════════════════════════════════════════════════
-// SIMPLE MATCH ROW (for team/league pages)
+// SIMPLE MATCH ROW
 // ═══════════════════════════════════════════════════════════
 function makeSimpleMatchRow(f){
   var s=f.fixture.status,home=f.teams.home,away=f.teams.away,g=f.goals;
