@@ -59,11 +59,16 @@ app.get("/api/fixtures", async (req, res) => {
   const nextDate = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().split('T')[0];
 
   try {
-    const [result1, result2] = await Promise.all([
-      fetchJSON(`${BASE}/fixtures?date=${date}`),
-      fetchJSON(`${BASE}/fixtures?date=${nextDate}`)
-    ]);
-    const combined = [...(result1.data.response || []), ...(result2.data.response || [])];
+    const result1 = await fetchJSON(`${BASE}/fixtures?date=${date}`);
+    const combined = [...(result1.data.response || [])];
+
+    // Try next day separately - don't fail everything if it errors
+    try {
+      const result2 = await fetchJSON(`${BASE}/fixtures?date=${nextDate}`);
+      combined.push(...(result2.data.response || []));
+    } catch (e) {
+      console.log("Next-day fetch failed, continuing with today only:", e.message);
+    }
 
     const seen = new Set();
     const filtered = combined.filter(f => {
