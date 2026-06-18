@@ -179,7 +179,21 @@ app.get("/api/top-assists", async (req, res) => {
   const season = currentSeason();
   await proxy(`${BASE}/players/topassists?league=${league}&season=${season}`, res);
 });
- 
+
+// ── WORLD CUP GROUP STANDINGS ─────────────────────────────────────────────
+app.get("/api/wc-standings", async (req, res) => {
+  try {
+    const r = await fetch(`${BASE}/standings?league=1&season=2026`, { headers: HEADERS });
+    if (!r.ok) return res.status(r.status).json({ error: `API error ${r.status}` });
+    const data = await r.json();
+    if (data.errors && Object.keys(data.errors).length > 0)
+      return res.status(401).json({ error: "API error", details: data.errors });
+    res.json(data);
+  } catch (e) {
+    console.error("WC standings error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
 // Catch-all
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
