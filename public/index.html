@@ -9,7 +9,7 @@
 <style>
 :root {
   --black:#080808; --pitch:#0f1a0f; --lime:#b5ff2d; --lime-dim:#b5ff2d18;
-  --white:#f0f0f0; --grey:#888; --dimgrey:#333; --red:#ff2d2d;
+  --white:#f0f0f0; --grey:#888; --dimgrey:#7a7a7a; --red:#ff2d2d;
   --red-dim:#ff2d2d20; --yellow:#ffd600; --blue:#2d8fff; --border:#1e1e1e;
   --surface:#111; --sidebar:240px;
 }
@@ -162,6 +162,8 @@ header{background:var(--lime);border-bottom:4px solid var(--black);flex-shrink:0
 .event-away{text-align:left;font-family:'Oswald',sans-serif;font-size:13px;color:var(--white);}
 .event-min{text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--dimgrey);}
 .event-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--dimgrey);display:block;margin-top:1px;}
+.sub-on{color:var(--lime);font-weight:600;}
+.sub-off{color:var(--red);opacity:0.85;}
 
 /* ── STATS ── */
 .stats-list{display:flex;flex-direction:column;gap:10px;}
@@ -693,7 +695,7 @@ function switchTab(btn,paneId){
 // ═══════════════════════════════════════════════════════════
 function eventIcon(type,detail){
   var t=(type||"").toLowerCase(),d=(detail||"").toLowerCase();
-  if(t==="goal"){if(d.indexOf("own")!==-1)return"\u26BD OG";if(d.indexOf("penalty")!==-1)return"\u26BD (P)";return"\u26BD";}
+  if(t==="goal"){if(d.indexOf("missed")!==-1)return"\u274C (P)";if(d.indexOf("own")!==-1)return"\u26BD OG";if(d.indexOf("penalty")!==-1)return"\u26BD (P)";return"\u26BD";}
   if(t==="card"){if(d.indexOf("red")!==-1)return"\uD83D\uDFE5";if(d.indexOf("yellow-red")!==-1)return"\uD83D\uDFE7";return"\uD83D\uDFE8";}
   if(t==="subst")return"\uD83D\uDD04";
   if(t==="var")return"\uD83D\uDCFA";
@@ -705,8 +707,15 @@ function renderEvents(events,homeTeamId){
   events.forEach(function(ev){
     var isHome=ev.team&&ev.team.id===homeTeamId;
     var icon=eventIcon(ev.type,ev.detail);
+    var isSub=(ev.type||"").toLowerCase()==="subst";
     var player=ev.player&&ev.player.name?ev.player.name:"";
-    var assist=ev.assist&&ev.assist.name?'<span class="event-sub">\u2191 '+ev.assist.name+'</span>':'';
+    var assist;
+    if(isSub){
+      player='<span class="sub-on">\u2191 '+player+'</span>';
+      assist=ev.assist&&ev.assist.name?'<span class="event-sub sub-off">\u2193 '+ev.assist.name+'</span>':'';
+    }else{
+      assist=ev.assist&&ev.assist.name?'<span class="event-sub">\u2191 '+ev.assist.name+'</span>':'';
+    }
     var min=(ev.time&&ev.time.elapsed?ev.time.elapsed:"?")+(ev.time&&ev.time.extra?"+"+ev.time.extra:"")+"'";
     var homeContent=isHome?'<span>'+icon+'</span> '+player+assist:'';
     var awayContent=!isHome?player+assist+' <span>'+icon+'</span>':'';
